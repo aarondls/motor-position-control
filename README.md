@@ -24,7 +24,7 @@ No prerequisite knowledge is assumed. The guide will walk through every single d
   * Comes with a 50W power resistor. This guide will assume the 24V variant.
 * ASM AS5047P magnetic rotary sensor evaluation board
 * Brushless motor
-  * Any 12-24V as long as it does not exceed the ODrive peak current capaility. For this guide, a small motor would be recommended. The one used is a Sunnysky V3508.
+  * Any 12-24V as long as it does not exceed the ODrive peak current capaility. For this guide, a small motor would be recommended. The one used is a Sunnysky V3508 580KV.
 * Power supply
   * Any 12-24V DC power supply or lipo battery that can supply the current needed for the motor.
 * Soldering iron
@@ -37,16 +37,25 @@ For the optional testbed frame:
 * 3D printer
 * M2.5 screws and heatset inserts
 
-
 ## Setting up the testbed (optional)
 
 To make it easier to use the ODrive while testing it with the motor, I designed a 3D printed frame to hold the ODrive and the power resistor, as well as have space to mount the motor and encoder. The STL file for the design is available in the *designs* folder.
+
+![CAD-design](https://raw.githubusercontent.com/aarondls/motor-position-control/main/Images/design_transparent.png)
 
 The frame was printed at 20% infill. Adjust this infill, the screw hole sizes, and the motor mounting holes to match your own set-up. The motor mount is specifically designed for the Sunnysky V3508 brushless motor. The actual Fusion 360 file is available to edit the design.
 
 The ODrive attaches via the included standoffs in the kit and regular M3 nuts. The included power resistor also attaches to the frame using regular M3 screws.
 
 To accomodate your own motor, design the motor mount, and simply adjust the holes in the testbed frame to match the screw holes on your mount. Note when designing the motor mount that the distance of the magnet from the encoder is specified in the datasheet.
+
+### Renderings
+
+![Render-transparent](https://raw.githubusercontent.com/aarondls/motor-position-control/main/Images/render_transparent.png)
+
+### Actual print
+
+![actual-print](https://github.com/aarondls/motor-position-control/blob/main/Images/actual_print.png?raw=true)
 
 ## Wiring the encoder
 
@@ -60,21 +69,21 @@ Now, we can examine the pins on the AS5047 evaluation board. This portion of the
 
 ![Datasheet P6](https://raw.githubusercontent.com/aarondls/motor-position-control/main/Images/datasheet_p6.png)
 
-For this guide, we would be using SPI to interface with the ODrive. This allows us to avoid having to calibrate everytime the ODrive and encoder starts up.
+For this guide, we would be using ABI to interface with the ODrive. We would also use the Z index signal to avoid having to calibrate everytime the ODrive starts up.
 
 For a single device application, we have the option for a 4-wire mode, which requires the MOSI, MISO, SCK, and CSn pins. This section of the AS5x47y Interfaces document sums it all up:
 
 ![Interface_document_2.2](https://raw.githubusercontent.com/aarondls/motor-position-control/main/Images/Interfaces_2.2.png)
 
-On the ODrive board, there are pins marked SCK, MISO, MOSI, 5V, and GND. MISO, MOSI, and 5V (or 3.3, depending on what voltage was selected earlier) goes to the corresponding pins of the same name on the AS5047 board. SCK goes to CLK (for those wondering, SCK stands for Serial CLocK).
+On the ODrive board, there are pins marked A, B, Z, 5V, and GND for each motor. Since we are using motor 0, we use the pins close to M0. A, B, GND, and 5V (or 3.3, depending on what voltage was selected earlier) all go to the corresponding pins of the same name on the AS5047 board. The Z pin then goes to the I (index) pin of the AS5047 board.
 
 We can choose any GPIO pin to connect to CSn, but keep in mind that pins 1 and 2 are usually used by UART. I went with pin 4.
 
-The connections for SPI, from ODrive -> encoder, are therefore:
+The connections for ABI with index signal, from ODrive -> encoder, are therefore:
 
-    SCK    -->  CLK
-    MISO   -->  MISO
-    MOSI   -->  MOSI
+    A      -->  A
+    B      -->  B
+    Z      -->  I
     5V     -->  5V
     GND    -->  GND
     GPIO 4 -->  CSn
@@ -87,8 +96,52 @@ I found that using a 2-part epoxy worked well in holding the magnet in place eve
 
 ## Wiring everything together
 
-The power supply is wired directly to the temrinals on the short side marked DC.
+The power supply is wired directly to the terminals on the short side marked DC.
 
-The three cables from the motor go to the three terminals on the long side. Choose either of the three-phase terminals, which are either for motor 1 or motor 2.
+The three cables from the motor go to the three terminals on the long side. Choose either of the three-phase terminals, which are either for motor 0 (M0) or motor 1 (M1). Note which one you chose, as this will be which axis you would be using for commands later on.
 
-We would also need to wire the included power resistor (or your own, if you have calculated a specific value that you need) to the ODrive. If you are using a battery as the power supply, not wiring it wouldn't be a problem since the ODrive would just feed power back to the battery and recharge it. Howveer, problems could arise if a power supply is used. The ODrive documentation details this problem more in-depth.
+We would also need to wire the included power resistor (or your own, if you have calculated a specific value that you need) to the ODrive. If you are using a battery as the power supply, not wiring it wouldn't be a problem since the ODrive would just feed power back to the battery and recharge it. However, problems could arise if a power supply is used. The ODrive documentation details this problem more in-depth.
+
+## Configuring the ODrive
+
+First, it is a good idea to update the ODrive firmware to the latest one. It might be as easy as following the steps outlined at [ODrive Tool](https://docs.odriverobotics.com/odrivetool#upgrading-firmware-with-a-different-dfu-tool), but a lot of errors could also go your way.
+
+For me, I was using a Mac and hit pretty much every snag you could with it, so I can explain most common errors and how to deal with them.
+
+Running the command
+
+```bash
+$ odrivetool dfu
+```
+
+should do it, but for me, it got stuck at the "Putting device into DFU mode..." message. Thus, I followed the guide for Mac users, but hit another snag at the command
+
+```bash
+$ brew cask install gcc-arm-embedded
+```
+
+To get around the fact that gcc-arm-embedded has been removed from homebrew, we can use the commands
+
+```bash
+$ brew tap osx-cross/arm
+$ brew install arm-gcc-bin
+```
+
+At the moment I did this, MacOS Big Sur still has issues, and you may run into CLT not supported errors. To get around this, simply download the Command Line Tools for Xcode at [Apple's website](https://developer.apple.com/download/more/).
+
+After all this, we can finally follow the second step on the macOS portion of the [ODrive Tool page](https://docs.odriverobotics.com/odrivetool#upgrading-firmware-with-a-different-dfu-tool), replacing the filenames with the correct ones when needed.
+
+Now, follow the ODrive getting started page starting on the "Downloading and Installing Tools" portion. It does a great job of explaining everything and I found it to be extremely helpful and beginner friendly.
+
+Some useful things to note while doing the getting started guide:
+
+* For the Sunnysky V3508 motors used
+  * I set the maximum calibration current to 5A, but you should select any current you are comfortable with (the default is 10A).
+  * The motor has 14 magnets in the rotor, so pole_pairs should be set to 7.
+  * The motor is rated at 580KV, so torque_constant should be set to 0.01425862069. With earlier firmware versions, you might get the error "attribute not found", which is why we updated it.
+  * The motor is a hobby brushless motor, so set motor_mode to MOTOR_TYPE_HIGH_CURRENT.
+* For the AS5047 encoder used
+  * Count per revolution is 4000, so set cpr to 4000. Actually, the data sheet says the default is 4096, but after much frustration and testing I observed the actual value to be different. Other users on the ODrive forum seems to have the same problem too.
+
+After finishing the getting started guide, everything should be working fine.
+
