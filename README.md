@@ -69,24 +69,21 @@ Now, we can examine the pins on the AS5047 evaluation board. This portion of the
 
 ![Datasheet P6](https://raw.githubusercontent.com/aarondls/motor-position-control/main/Images/datasheet_p6.png)
 
-For this guide, we would be using ABI to interface with the ODrive. We would also use the Z index signal to avoid having to calibrate everytime the ODrive starts up.
+For this guide, we would be using ABI to interface with the ODrive. ABI was chosen over SPI since a single ODrive board can easily work with two encoders over ABI, allowing for an easy extension to two motors in the future. The index signal is then used to avoid having to calibrate everytime the ODrive starts up.
 
-For a single device application, we have the option for a 4-wire mode, which requires the MOSI, MISO, SCK, and CSn pins. This section of the AS5x47y Interfaces document sums it all up:
+This portion of the datsheet nicely shows what we need for ABI (and other interfaces like SPI should you prefer those):
 
-![Interface_document_2.2](https://raw.githubusercontent.com/aarondls/motor-position-control/main/Images/Interfaces_2.2.png)
+![AS5047P Block Diagram](https://raw.githubusercontent.com/aarondls/motor-position-control/main/Images/AS5047P_block_diagram.png)
 
 On the ODrive board, there are pins marked A, B, Z, 5V, and GND for each motor. Since we are using motor 0, we use the pins close to M0. A, B, GND, and 5V (or 3.3, depending on what voltage was selected earlier) all go to the corresponding pins of the same name on the AS5047 board. The Z pin then goes to the I (index) pin of the AS5047 board.
 
-We can choose any GPIO pin to connect to CSn, but keep in mind that pins 1 and 2 are usually used by UART. I went with pin 4.
+The wiring scheme for ABI, from ODrive --> encoder, would therefore require 5 wires and are:
 
-The connections for ABI with index signal, from ODrive -> encoder, are therefore:
-
-    A      -->  A
-    B      -->  B
-    Z      -->  I
-    5V     -->  5V
-    GND    -->  GND
-    GPIO 4 -->  CSn
+* A &nbsp; &nbsp; &nbsp; &nbsp;--> &nbsp; &nbsp; A
+* B &nbsp; &nbsp; &nbsp; &nbsp;--> &nbsp; &nbsp; B
+* Z &nbsp; &nbsp; &nbsp; &nbsp;--> &nbsp; &nbsp; I
+* 5V &nbsp;&nbsp; &nbsp; --> &nbsp; &nbsp; 5V
+* GND &nbsp; --> &nbsp; &nbsp; GND
 
 ## Preparing the motor
 
@@ -110,21 +107,21 @@ For me, I was using a Mac and hit pretty much every snag you could with it, so I
 
 Running the command
 
-```bash
-$ odrivetool dfu
+```shell
+odrivetool dfu
 ```
 
 should do it, but for me, it got stuck at the "Putting device into DFU mode..." message. Thus, I followed the guide for Mac users, but hit another snag at the command
 
 ```bash
-$ brew cask install gcc-arm-embedded
+brew cask install gcc-arm-embedded
 ```
 
 To get around the fact that gcc-arm-embedded has been removed from homebrew, we can use the commands
 
 ```bash
-$ brew tap osx-cross/arm
-$ brew install arm-gcc-bin
+brew tap osx-cross/arm
+brew install arm-gcc-bin
 ```
 
 At the moment I did this, MacOS Big Sur still has issues, and you may run into CLT not supported errors. To get around this, simply download the Command Line Tools for Xcode at [Apple's website](https://developer.apple.com/download/more/).
@@ -143,5 +140,4 @@ Some useful things to note while doing the getting started guide:
 * For the AS5047 encoder used
   * Count per revolution is 4000, so set cpr to 4000. Actually, the data sheet says the default is 4096, but after much frustration and testing I observed the actual value to be different. Other users on the ODrive forum seems to have the same problem too.
 
-After finishing the getting started guide, everything should be working fine.
-
+After finishing the getting started guide, everything should be set-up and ready for tuning.
