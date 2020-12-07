@@ -99,45 +99,175 @@ The three cables from the motor go to the three terminals on the long side. Choo
 
 We would also need to wire the included power resistor (or your own, if you have calculated a specific value that you need) to the ODrive. If you are using a battery as the power supply, not wiring it wouldn't be a problem since the ODrive would just feed power back to the battery and recharge it. However, problems could arise if a power supply is used. The ODrive documentation details this problem more in-depth.
 
-## Configuring the ODrive
+## Which operating system to use
 
-First, it is a good idea to update the ODrive firmware to the latest one. It might be as easy as following the steps outlined at [ODrive Tool](https://docs.odriverobotics.com/odrivetool#upgrading-firmware-with-a-different-dfu-tool), but a lot of errors could also go your way.
+I highly recommend using a Windows or Linux device. If you use macOS most of the time, I recommend updating the firmware and tuning using a non-Mac device. After this, everything else can be done on a Mac.
 
-For me, I was using a Mac and hit pretty much every snag you could with it, so I can explain most common errors and how to deal with them.
+## Updating the ODrive firmware
 
-Running the command
+First, it is a good idea to update the ODrive firmware to the latest one. The board most likely comes shipped with the latest firmware, but it is good to know how to update it in the future.
+
+It might be as easy as following the steps outlined at [ODrive Tool](https://docs.odriverobotics.com/odrivetool#upgrading-firmware-with-a-different-dfu-tool), but a lot of errors could also go your way.
+
+I tried this instructions on both Windows and macOS. The Windows instruction worked smoothly, but the macOS did not, which is why I recommend not using a Mac for this potion.
+
+On the Mac, running the command odrivetool dfu should have done it, but for me it got stuck at putting the device into DFU mode.
 
 ```shell
-odrivetool dfu
+$ odrivetool dfu
+Putting device into DFU mode...
 ```
 
-should do it, but for me, it got stuck at the "Putting device into DFU mode..." message. Thus, I followed the guide for Mac users, but hit another snag at the command
+Switching the DIP switch into DFU mode on the board makes no difference either.
+
+Since the python DFU tool doesn't work, we can instead convert the binary file through the ARM development tools, and flash the firmware using dfu-util.
+
+Note that previously we could install gcc-arm-embedded using
 
 ```bash
 brew cask install gcc-arm-embedded
 ```
 
-To get around the fact that gcc-arm-embedded has been removed from homebrew, we can use the commands
+but this no longer works after ARM depreciated the use of PPA.
+
+To get around this fact that gcc-arm-embedded is no longer on homebrew, we can instead tap into osx-cross/arm and install from there.
 
 ```bash
 brew tap osx-cross/arm
 brew install arm-gcc-bin
 ```
 
-At the moment I did this, MacOS Big Sur still has issues, and you may run into CLT not supported errors. To get around this, simply download the Command Line Tools for Xcode at [Apple's website](https://developer.apple.com/download/more/).
+At the moment I did this, macOS Big Sur still has issues, and you may run into CLT not supported errors. To get around this, simply download and update the Command Line Tools for Xcode at [Apple's website](https://developer.apple.com/download/more/).
 
-After all this, we can finally follow the second step on the macOS portion of the [ODrive Tool page](https://docs.odriverobotics.com/odrivetool#upgrading-firmware-with-a-different-dfu-tool), replacing the filenames with the correct ones when needed.
+Finally, after all this, we can finally follow the second step on the macOS portion of the [ODrive Tool page](https://docs.odriverobotics.com/odrivetool#upgrading-firmware-with-a-different-dfu-tool), replacing the filenames with the correct ones when needed.
 
-Now, follow the ODrive getting started page starting on the "Downloading and Installing Tools" portion. It does a great job of explaining everything and I found it to be extremely helpful and beginner friendly.
+## Configuring the ODrive
+
+Now, follow the ODrive getting started page starting on the "Downloading and Installing Tools" portion for your operating system. It does a great job of explaining everything and I found it to be extremely helpful and beginner friendly, so there is no need to rewrite another guide for that portion.
 
 Some useful things to note while doing the getting started guide:
 
 * For the Sunnysky V3508 motors used
   * I set the maximum calibration current to 5A, but you should select any current you are comfortable with (the default is 10A).
+  * I left vel_limit to its default value.
   * The motor has 14 magnets in the rotor, so pole_pairs should be set to 7.
   * The motor is rated at 580KV, so torque_constant should be set to 0.01425862069. With earlier firmware versions, you might get the error "attribute not found", which is why we updated it.
   * The motor is a hobby brushless motor, so set motor_mode to MOTOR_TYPE_HIGH_CURRENT.
 * For the AS5047 encoder used
-  * Count per revolution is 4000, so set cpr to 4000. Actually, the data sheet says the default is 4096, but after much frustration and testing I observed the actual value to be different. Other users on the ODrive forum seems to have the same problem too.
+  * Count per revolution is 4000, so set cpr to 4000. Note that while the data sheet says the default is 4096, I observed the actual value to be different after much testing and frustration. Other users on the ODrive forum seems to have the same problem too.
 
 After finishing the getting started guide, everything should be set-up and ready for tuning.
+
+## Tuning
+
+For this part, I highly recommend using Windows or Linux over macOS, since the liveplotter tool currenly crashes on macOS. Without it, it is extremely difficult, if not impossible, to properly tune the controller.
+
+The tuning guide on the ODrive docs is quite lacking. However, it is still worth a read before following this guide to see where the overall procedure came from.
+
+### Preparation for tuning
+
+Before starting the tuning process, make sure that the axis state is in closed loop control mode.
+
+```bash
+<axis>.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+```
+
+Note that *\<axis\>* is replaced with the axis number you chose earlier (0 for motor 0 and 1 for motor 1). The odrive number is 0 for the first odrive plugged. For example, when setting up M0 and for a single ODrive board plugged in:
+
+```bash
+odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+```
+
+To return to the idle state at any point, we can set the state to *AXIS_STATE_IDLE*.
+
+```bash
+<axis>.requested_state = AXIS_STATE_IDLE
+```
+
+The liveplotter tool is used to dial in the gain values. To graph the position setpoint against the measured position:
+
+```bash
+start_liveplotter(lambda:[odrv0.axis0.encoder.pos_estimate, odrv0.axis0.controller.pos_setpoint])
+```
+
+You can read more about the liveplotter tool [here](https://docs.odriverobotics.com/odrivetool#liveplotter).
+
+Finally, when anything goes wrong, the state goes back to idle or undefined and the whole thing stops. Follow the procedure as described in the getting started guide, which is redescribed here for convenience:
+
+Read the errors by
+
+```bash
+dump_errors(odrv0)
+```
+
+then figure out what is causing it from the [error code documentation](https://docs.odriverobotics.com/troubleshooting.html#error-codes). 
+
+After addressing the issue, clear the error slate.
+
+```bash
+dump_errors(odrv0, True)
+```
+
+### The tuning process
+
+Now, begin the tuning process by setting all the gain values to zero.
+
+```bash
+<axis>.controller.config.pos_gain = 0
+<axis>.controller.config.vel_gain = 0
+<axis>.controller.config.vel_integrator_gain = 0
+```
+
+Increase *vel_gain* by around 30% per iteration until the motor exhibits some vibration. The vibrations are noticable and make a distinct reverberating noise.
+
+We can also easily see through liveplotter than some vibration is occuring:
+
+![Vibrations](https://raw.githubusercontent.com/aarondls/motor-position-control/main/Images/vibrations.png)
+
+At this point, there is no need yet to send input_pos commands. Simply disturbing the motor slighly with your fingers would induce vibrations if *vel_gain* is too high, or the motor would vibrate even without any disturbance.
+
+Sometimes, the motor spins too quickly and causes the whole thing to stop. Read and clear the errors as described above, then increase *vel_limit*.
+
+At the point where the motor exhibits some vibration, decrease *vel_gain* to half of its vibrating value.
+
+Now, increase *pos_gain* by 30% per iteration until you see overshoot.
+
+To see if the controller overshoots, turn the motor by hand and let go, then view the liveplotter graph.
+
+Alternatively, you could send input position commands using
+
+```bash
+<axis>.controller.input_pos = position
+```
+
+where *position* could be 1 turn, 1.5 turns etc.
+
+and view the liveplotter graph.
+
+For example, setting *input_pos* equal to 2 generates this graph on liveplotter:
+
+![Undershoot](https://raw.githubusercontent.com/aarondls/motor-position-control/main/Images/undershoot.png)
+
+It is clear in this case that undershoot is present, so we need to increase *pos_gain* until overshoot occurs. Increasing *pos_gain* by 30% per iteration yields this graph in liveplotter, where we see overshoot starts to occur.
+
+![Overshoot](https://raw.githubusercontent.com/aarondls/motor-position-control/main/Images/overshoot.png)
+
+At the point where overshoot occurs, back down *pos_gain* until the overshoot disappears.
+
+Getting rid of the overshoot and sending another *input_pos* command generates this graph on liveplotter:
+
+![No overshoot](https://raw.githubusercontent.com/aarondls/motor-position-control/main/Images/no_overshoot.png)
+
+Now, we can set *vel_integrator_gain* using the formula 0.5 * bandwidth * *vel_gain*.
+
+From the ODrive docs
+
+> Bandwidth is the overall resulting tracking bandwidth of your system. Say your tuning made it track commands with a settling time of 100ms (the time from when the setpoint changes to when the system arrives at the new setpoint); this means the bandwidth was 1/(100ms) = 1/(0.1s) = 10hz. In this case you should set the vel_integrator_gain = 0.5 * 10 * vel_gain.
+
+Thus, to find the bandwidth value, set a new *input_pos* and view the time it takes to settle into the set position using the liveplotter graph.
+
+After setting *vel_integrator_gain*, disturbing the control loop by manually turning the motor yields this liveplotter graph:
+
+![Disturbing tuned control loop](https://raw.githubusercontent.com/aarondls/motor-position-control/main/Images/disturbing_tuned.png)
+
+After this, congratulations! The control loop should now be tuned.
