@@ -10,25 +10,25 @@ Based from my experiences and struggles, I was inspired to create a guide meant 
 
 [Prerequisites](#Prerequisites)
 
-[Recommended resources](#Recommended\ resources)
+[Recommended resources](#Recommended-resources)
 
 [Materials](#Materials)
 
-[Setting up the testbed (optional)](#Setting\ up\ the\ testbed\ (optional))
+[Setting up the testbed (optional)](#Setting-up-the-testbed-(optional))
 
-[Wiring the encoder using ABI](#Wiring\ the\ encoder\ using\ ABI)
+[Wiring the encoder using ABI](#Wiring-the-encoder-using-ABI)
 
-[Preparing the motor](#Preparing\ the\ motor)
+[Preparing the motor](#Preparing-the-motor)
 
-[Which operating system to use](#Which\ operating\ system\ to\ use)
+[Which operating system to use](#Which-operating-system-to-use)
 
-[Updating the ODrive firmware](#Updating\ the\ ODrive\ firmware)
+[Updating the ODrive firmware](#Updating-the-ODrive-firmware)
 
-[Configuring the ODrive](#Configuring\ the\ ODrive)
+[Configuring the ODrive](#Configuring-the-ODrive)
 
 [Tuning](#Tuning)
 
-[What's next](#What's\ next)
+[What's next](#What's-next)
 
 ## Prerequisites
 
@@ -304,3 +304,11 @@ After setting *vel_integrator_gain*, disturbing the control loop by manually tur
 ![Disturbing tuned control loop](https://raw.githubusercontent.com/aarondls/motor-position-control/main/Images/disturbing_tuned.png)
 
 After this, congratulations! The control loop should now be tuned.
+
+## What's next
+
+At this point, everything should be set-up and ready to go.
+
+I recommend looking over the ODrive documentation for a comprehensive tour of
+
+Have fun working on your projects!
