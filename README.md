@@ -8,27 +8,17 @@ Based from my experiences and struggles, I was inspired to create a guide meant 
 
 ## Table of contents
 
-[Prerequisites](#Prerequisites)
-
-[Recommended resources](#Recommended-resources)
-
-[Materials](#Materials)
-
-[Setting up the testbed (optional)](#Setting-up-the-testbed-(optional))
-
-[Wiring the encoder using ABI](#Wiring-the-encoder-using-ABI)
-
-[Preparing the motor](#Preparing-the-motor)
-
-[Which operating system to use](#Which-operating-system-to-use)
-
-[Updating the ODrive firmware](#Updating-the-ODrive-firmware)
-
-[Configuring the ODrive](#Configuring-the-ODrive)
-
-[Tuning](#Tuning)
-
-[What's next](#What's-next)
+* [Prerequisites](#Prerequisites)
+* [Recommended resources](#Recommended-resources)
+* [Materials](#Materials)
+* [Setting up the testbed (optional)](#Setting-up-the-testbed-(optional))
+* [Wiring the encoder using ABI](#Wiring-the-encoder-using-ABI)
+* [Preparing the motor](#Preparing-the-motor)
+* [Which operating system to use](#Which-operating-system-to-use)
+* [Updating the ODrive firmware](#Updating-the-ODrive-firmware)
+* [Configuring the ODrive](#Configuring-the-ODrive)
+* [Tuning](#Tuning)
+* [What's next](#What's-next)
 
 ## Prerequisites
 
@@ -88,11 +78,11 @@ To accomodate your own motor, design the motor mount, and simply adjust the hole
 
 This portion shows the AS5047P magnetic position sensor, but the instructions generalize for any ABI capable encoder.
 
-ABI was chosen over SPI since a single ODrive board can easily work with two encoders over ABI, allowing for an easier extension to two motors in the future compared to SPI. Each motor terminal also has its own set of terminals needed for ABI.
+For this guide, ABI was chosen over SPI since it is easy to get started with and straightforward to expand to two encoders. Each motor terminal also has its own set of terminals needed for ABI. If you prefer another interface such as SPI, you could look over the ODrive encoder page for guidance on that.
 
-The index signal is then used to avoid having to calibrate everytime the ODrive starts up. This is one advantage of absolute position encoders.
+The index signal of the encoder is then used to avoid having to calibrate everytime the ODrive starts up. This is one advantage of absolute position encoders.
 
-To prepare the encoder, first solder the included header pins. Then, short the correct pins for either 5V or 3.3V usage. Note which one you selected, as this would be important later on when connecting to the ODrive.
+To prepare the AS5047P evaluation board, first solder the included header pins. Then, short the correct pins for either 5V or 3.3V usage. Note which one you selected, as this would be important later on when connecting to the ODrive.
 
 I shorted mine by soldering the pads together to keep the form factor thin, but the encoder also comes with a jumper device that plugs onto the presoldered header.
 
@@ -183,7 +173,7 @@ Some useful things to note while doing the getting started guide:
 * For the Sunnysky V3508 motors used
   * I set the maximum calibration current to 5A, but you should select any current you are comfortable with (the default is 10A).
   * I left vel_limit to its default value.
-  * The motor has 14 magnets in the rotor, so pole_pairs should be set to 7.
+  * The motor has 14 magnets in the rotor, so pole_pairs should be set to 7. An easy way to find this is to simply count the number of magnets (if visible) of the motor and divide it by 2.
   * The motor is rated at 580KV, so torque_constant should be set to 0.01425862069. With earlier firmware versions, you might get the error "attribute not found", which is why we updated it.
   * The motor is a hobby brushless motor, so set motor_mode to MOTOR_TYPE_HIGH_CURRENT.
 * For the AS5047 encoder used
@@ -195,7 +185,7 @@ After finishing the getting started guide, everything should be set-up and ready
 
 For this part, I highly recommend using Windows or Linux over macOS, since the liveplotter tool currenly crashes on macOS. Without it, it is extremely difficult, if not impossible, to properly tune the controller.
 
-The tuning guide on the ODrive docs is quite lacking. However, it is still worth a read before following this guide to see where the overall procedure came from.
+The tuning guide on the ODrive docs is quite unfriendly to the first time user. However, it is still worth a read before following this guide to see where the overall procedure came from.
 
 ### Preparation for tuning
 
@@ -309,6 +299,6 @@ After this, congratulations! The control loop should now be tuned.
 
 At this point, everything should be set-up and ready to go.
 
-I recommend looking over the ODrive documentation for a comprehensive tour of
+I recommend looking over the [ODrive documentation](https://docs.odriverobotics.com) for a comprehensive tour of its capabilities.
 
 Have fun working on your projects!
