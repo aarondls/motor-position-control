@@ -192,10 +192,10 @@ The tuning guide on the ODrive docs is quite unfriendly to the first time user. 
 Before starting the tuning process, make sure that the axis state is in closed loop control mode.
 
 ```bash
-<axis>.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+<odrv>.<axis>.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 ```
 
-Note that *\<axis\>* is replaced with the axis number you chose earlier (0 for motor 0 and 1 for motor 1). The odrive number is 0 for the first odrive plugged. For example, when setting up M0 and for a single ODrive board plugged in:
+Note that *\<odrv\>* is replaced with the odrv number (0 for the first ODrive plugged into the PC) and *\<axis\>* is replaced with the axis number you chose earlier (0 for motor 0 and 1 for motor 1). For example, when setting up M0 and for a single ODrive board plugged in:
 
 ```bash
 odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
@@ -204,7 +204,7 @@ odrv0.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 To return to the idle state at any point, we can set the state to *AXIS_STATE_IDLE*.
 
 ```bash
-<axis>.requested_state = AXIS_STATE_IDLE
+<odrv>.<axis>.requested_state = AXIS_STATE_IDLE
 ```
 
 The liveplotter tool is used to dial in the gain values. To graph the position setpoint against the measured position:
@@ -236,60 +236,60 @@ dump_errors(odrv0, True)
 Now, begin the tuning process by setting all the gain values to zero.
 
 ```bash
-<axis>.controller.config.pos_gain = 0
-<axis>.controller.config.vel_gain = 0
-<axis>.controller.config.vel_integrator_gain = 0
+<odrv>.<axis>.controller.config.pos_gain = 0
+<odrv>.<axis>.controller.config.vel_gain = 0
+<odrv>.<axis>.controller.config.vel_integrator_gain = 0
 ```
 
-Increase *vel_gain* by around 30% per iteration until the motor exhibits some vibration. The vibrations are noticable and make a distinct reverberating noise.
+Increase `vel_gain` by around 30% per iteration until the motor exhibits some vibration. The vibrations are noticable and make a distinct reverberating noise.
 
-We can also easily see through liveplotter than some vibration is occuring:
+To trigger vibrations, we could use `input_pos` with the command
+
+```bash
+<odrv>.<axis>.controller.input_pos = <Float>
+```
+
+where `Float` is in turns and could be 1 turn, 1.5 turns etc.
+
+For smaller motors, we could also disturb it slighly by hand but for larger motors, it might not be possible and/or safe.
+
+While increasing `vel_gain`, we can easily see through liveplotter when some vibration is occuring:
 
 ![Vibrations](https://raw.githubusercontent.com/aarondls/motor-position-control/main/Images/vibrations.png)
 
-At this point, there is no need yet to send input_pos commands. Simply disturbing the motor slighly with your fingers would induce vibrations if *vel_gain* is too high, or the motor would vibrate even without any disturbance.
+If `vel_gain` is excessively high, the motor could vibrate even without any disturbance.
 
-Sometimes, the motor spins too quickly and causes the whole thing to stop. Read and clear the errors as described above, then increase *vel_limit*.
+Sometimes, the motor spins too quickly and causes the whole thing to stop. Read and clear the errors as described above, then increase `vel_limit`.
 
-At the point where the motor exhibits some vibration, decrease *vel_gain* to half of its vibrating value.
+At the point where the motor exhibits some vibration, decrease `vel_gain` to half of its vibrating value.
 
-Now, increase *pos_gain* by 30% per iteration until you see overshoot.
+Now, increase `pos_gain` by 30% per iteration until you see overshoot.
 
-To see if the controller overshoots, turn the motor by hand and let go, then view the liveplotter graph.
+To see if the controller overshoots, you could send a new `input_pos` input position again and view the liveplotter graph. Alternatively, for smaller motors you you could turn the motor by hand and let go, then view the liveplotter graph.
 
-Alternatively, you could send input position commands using
-
-```bash
-<axis>.controller.input_pos = position
-```
-
-where *position* could be 1 turn, 1.5 turns etc.
-
-and view the liveplotter graph.
-
-For example, setting *input_pos* equal to 2 generates this graph on liveplotter:
+For example, setting `input_pos` equal to 2 generates this graph on liveplotter:
 
 ![Undershoot](https://raw.githubusercontent.com/aarondls/motor-position-control/main/Images/undershoot.png)
 
-It is clear in this case that undershoot is present, so we need to increase *pos_gain* until overshoot occurs. Increasing *pos_gain* by 30% per iteration yields this graph in liveplotter, where we see overshoot starts to occur.
+It is clear in this case that undershoot is present, so we need to increase `pos_gain` until overshoot occurs. Increasing `pos_gain` by 30% per iteration and disturbing the motor by hand yields this graph in liveplotter, where we see overshoot starts to occur.
 
 ![Overshoot](https://raw.githubusercontent.com/aarondls/motor-position-control/main/Images/overshoot.png)
 
-At the point where overshoot occurs, back down *pos_gain* until the overshoot disappears.
+At the point where overshoot occurs, back down `pos_gain` until the overshoot disappears.
 
-Getting rid of the overshoot and sending another *input_pos* command generates this graph on liveplotter:
+Getting rid of the overshoot and sending another `input_pos` command generates this graph on liveplotter:
 
 ![No overshoot](https://raw.githubusercontent.com/aarondls/motor-position-control/main/Images/no_overshoot.png)
 
-Now, we can set *vel_integrator_gain* using the formula 0.5 * bandwidth * *vel_gain*.
+Now, we can set `vel_integrator_gain` using the formula 0.5 * bandwidth * `vel_gain`.
 
-From the ODrive docs
+From the ODrive docs:
 
 > Bandwidth is the overall resulting tracking bandwidth of your system. Say your tuning made it track commands with a settling time of 100ms (the time from when the setpoint changes to when the system arrives at the new setpoint); this means the bandwidth was 1/(100ms) = 1/(0.1s) = 10hz. In this case you should set the vel_integrator_gain = 0.5 * 10 * vel_gain.
 
 Thus, to find the bandwidth value, set a new *input_pos* and view the time it takes to settle into the set position using the liveplotter graph.
 
-After setting *vel_integrator_gain*, disturbing the control loop by manually turning the motor yields this liveplotter graph:
+After setting `vel_integrator_gain`, disturbing the control loop by manually turning the motor yields this liveplotter graph:
 
 ![Disturbing tuned control loop](https://raw.githubusercontent.com/aarondls/motor-position-control/main/Images/disturbing_tuned.png)
 
