@@ -1,10 +1,10 @@
 # Brushless motor position control
 
-This is a beginners guide to motor position control using the [ODrive motor controller](https://github.com/madcowswe/ODrive) and the [AMS AS5047](https://ams.com/as5047p) magnetic encoder.
+This is a beginners guide to motor position control using the [ODrive motor controller](https://github.com/madcowswe/ODrive) meant to be a great first-read.
 
-ODrive has its own great documentation page and getting started guide, but I found it easy to get lost in the plethora of information as a beginner. The AS5047 rotary position sensor is also a popular choice for motor encoders, and I found guides specifically on its usage with ODrive to be unfriendly to beginners.
+ODrive has its own great documentation page and getting started guide, but I found it easy to get lost in the plethora of information as a beginner.
 
-Based from my experiences and struggles, I was inspired to create a guide meant for users who have zero experience with ODrive and encoders in general. The guide also goes into detail on how to interface the AS5047 encoder and ODrive, a popular set-up I imagine most beginners would follow.
+Based from my experiences and struggles, I was inspired to create a guide meant for users who have zero experience with ODrive and encoders in general. The guide goes into detail on how set-up the ODrive board, how to interface it with an encoder through ABI, and how to tune the control loop.
 
 ## Prerequisites
 
@@ -12,7 +12,9 @@ No prerequisite knowledge is assumed. The guide will walk through every single d
 
 ## Recommended resources
 
-[ODrive Getting Started](https://docs.odriverobotics.com) - The getting started page from ODrive. One of the best resources for the first-time ODrive user. A must-read.
+[ODrive Getting Started](https://docs.odriverobotics.com) - This guide is only meant to be an introductory guide and is not meant to replace the full, comprehensive ODrive documentation. This getting started page from ODrive, as well as other pages in the docs, is the best resource for the ODrive user.
+
+It is a good idea to also look over the datasheet of your encoder. Shown below are resources for the AS5047 encoder:
 
 [AS5047 Eval Board Manual](https://media.digikey.com/pdf/Data%20Sheets/Austriamicrosystems%20PDFs/AS5047P-TS_EK_AB.pdf) - AS5047P evaluation board manual. Great for getting familiar with its usage.
 
@@ -22,20 +24,21 @@ No prerequisite knowledge is assumed. The guide will walk through every single d
 
 * ODrive motor controller
   * Comes with a 50W power resistor. This guide will assume the 24V variant.
-* ASM AS5047P magnetic rotary sensor evaluation board
+* Encoder
+  * In this guide, any ABI capable encoder would do. The ODrive does provide support for other interfaces, but we would use ABI here. The one used is the ASM AS5047P magnetic rotary sensor evaluation board.
 * Brushless motor
-  * Any 12-24V as long as it does not exceed the ODrive peak current capaility. For this guide, a small motor would be recommended. The one used is a Sunnysky V3508 580KV.
+  * Any 12-24V BLDC motor would work as long as it does not exceed the ODrive peak current capability. For this guide, a small motor would be recommended. The one used is a Sunnysky V3508 580KV.
 * Power supply
   * Any 12-24V DC power supply or lipo battery that can supply the current needed for the motor.
 * Soldering iron
-* Female to female ribbon cables
+* Male to female jumper cables
 * Epoxy
   * Any adhesive to attach the magnet to the motor's shaft would do.
 
 For the optional testbed frame:
 
 * 3D printer
-* M2.5 screws and heatset inserts
+* M2.5 screws and nuts
 
 ## Setting up the testbed (optional)
 
@@ -57,9 +60,13 @@ To accomodate your own motor, design the motor mount, and simply adjust the hole
 
 ![actual-print](https://github.com/aarondls/motor-position-control/blob/main/Images/actual_print.png?raw=true)
 
-## Wiring the encoder
+## Wiring the encoder using ABI
 
-The AS5047 evaluation board package makes it easy to work with the encoder, avoiding having to design your own PCB.
+This portion shows the AS5047P magnetic position sensor, but the instructions generalize for any ABI capable encoder.
+
+ABI was chosen over SPI since a single ODrive board can easily work with two encoders over ABI, allowing for an easier extension to two motors in the future compared to SPI. Each motor terminal also has its own set of terminals needed for ABI.
+
+The index signal is then used to avoid having to calibrate everytime the ODrive starts up. This is one advantage of absolute position encoders.
 
 To prepare the encoder, first solder the included header pins. Then, short the correct pins for either 5V or 3.3V usage. Note which one you selected, as this would be important later on when connecting to the ODrive.
 
@@ -68,8 +75,6 @@ I shorted mine by soldering the pads together to keep the form factor thin, but 
 Now, we can examine the pins on the AS5047 evaluation board. This portion of the datasheet nicely summarizes everything we need to know:
 
 ![Datasheet P6](https://raw.githubusercontent.com/aarondls/motor-position-control/main/Images/datasheet_p6.png)
-
-For this guide, we would be using ABI to interface with the ODrive. ABI was chosen over SPI since a single ODrive board can easily work with two encoders over ABI, allowing for an easy extension to two motors in the future. The index signal is then used to avoid having to calibrate everytime the ODrive starts up.
 
 This portion of the datsheet nicely shows what we need for ABI (and other interfaces like SPI should you prefer those):
 
@@ -87,11 +92,15 @@ The wiring scheme for ABI, from ODrive --> encoder, would therefore require 5 wi
 
 ## Preparing the motor
 
-The magnet has to be attached to the shaft of the motor, which sounds easier than it actually is. The magnet does not snap on the shaft perfectly down the center and  snaps around to other portions of the shaft easily. While positioning the magnet onto the shaft, you would feel the center position. Be careful as a slight nudge in any direction caused the magnet to snap to an off-center position.
+The magnet has to be attached to the shaft of the motor, which sounds easier than it actually is. The magnet does not snap on the shaft perfectly down the center and snaps around to other portions of the shaft easily. While positioning the magnet onto the shaft, you would feel the center position. Be careful as a slight nudge in any direction caused the magnet to snap to an off-center position.
 
-I found that using a 2-part epoxy worked well in holding the magnet in place even while it was still curing. Some people used a jig to precisely center the magnet and hold it in place while the adhesive set, but I did not need to use one since the epoxy was strong enough to hold it.
+I found that using a 2-part epoxy worked well in holding the magnet in place even while it was still curing. Some people use a jig to precisely center the magnet and hold it in place while the adhesive set, but I felt it was not needed as the epoxy was strong enough to hold it and easy enough to eyeball the center.
 
 ## Wiring everything together
+
+This diagram from the ODrive documentation provides a great overview of how everything connects together:
+
+![ODrive wiring diagram](https://docs.google.com/drawings/d/e/2PACX-1vTpJziAisrkvV1kTL4vckAJkmJ-BAvTwN1GeZZNCNwpTHv47Cf8bpz-gJqK2Z3un6FCHT4E-rcuUg6c/pub?w=1716&h=1281)
 
 The power supply is wired directly to the terminals on the short side marked DC.
 
@@ -101,7 +110,7 @@ We would also need to wire the included power resistor (or your own, if you have
 
 ## Which operating system to use
 
-I highly recommend using a Windows or Linux device. If you use macOS most of the time, I recommend updating the firmware and tuning using a non-Mac device. After this, everything else can be done on a Mac.
+I highly recommend using a Windows or Linux device. If you prefer macOS, I recommend updating the firmware and tuning using a non-Mac device. After this, everything else can be done on a Mac.
 
 ## Updating the ODrive firmware
 
