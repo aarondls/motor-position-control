@@ -6,6 +6,30 @@ ODrive has its own great documentation page and getting started guide, but I fou
 
 Based from my experiences and struggles, I was inspired to create a guide meant for users who have zero experience with ODrive and encoders in general. The guide goes into detail on how set-up the ODrive board, how to interface it with an encoder through ABI, and how to tune the control loop.
 
+## Table of contents
+
+[Prerequisites](#Prerequisites)
+
+[Recommended resources](#Recommended\ resources)
+
+[Materials](#Materials)
+
+[Setting up the testbed (optional)](#Setting\ up\ the\ testbed\ (optional))
+
+[Wiring the encoder using ABI](#Wiring\ the\ encoder\ using\ ABI)
+
+[Preparing the motor](#Preparing\ the\ motor)
+
+[Which operating system to use](#Which\ operating\ system\ to\ use)
+
+[Updating the ODrive firmware](#Updating\ the\ ODrive\ firmware)
+
+[Configuring the ODrive](#Configuring\ the\ ODrive)
+
+[Tuning](#Tuning)
+
+[What's next](#What's\ next)
+
 ## Prerequisites
 
 No prerequisite knowledge is assumed. The guide will walk through every single detail needed to set-up positional control for a brushless motor. However, as it is a beginners guide, it is not comprehensive, so I highly encourage taking a look at the recommended resources to gain more familiarity with how everything works.
